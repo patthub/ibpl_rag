@@ -240,18 +240,17 @@ a { color: var(--accent); }
 
 <section>
   <h2>Retrieval, step by step</h2>
-  <svg class="d" viewBox="0 0 1000 420" role="img" aria-label="Correct article among the 8 passages: baseline 0.60, with self-query 0.90, with metadata 0.95, with reranker 1.00">
-    <line x1="0" y1="40" x2="1000" y2="40" class="rule" stroke-dasharray="3 5"/>
-    <g class="fill">
-      <rect x="40" y="160" width="150" height="180"><title>baseline: 0.600</title></rect>
-      <rect x="290" y="70" width="150" height="270"><title>+ self-query: 0.900</title></rect>
-      <rect x="540" y="55" width="150" height="285"><title>+ metadata in chunks: 0.950</title></rect>
-    </g>
-    <rect x="790" y="40" width="150" height="300" fill="var(--accent)"><title>+ reranker: 1.000</title></rect>
-    <line x1="0" y1="340" x2="1000" y2="340" stroke="var(--ink)" stroke-width="1.5"/>
-    <g class="t b" font-size="22"><text x="40" y="148">0.60</text><text x="290" y="58">0.90</text><text x="540" y="43">0.95</text><text x="790" y="28">1.00</text></g>
-    <g font-size="16"><text x="40" y="370">baseline</text><text x="290" y="370">+ self-query</text><text x="540" y="370">+ metadata</text><text x="790" y="370">+ reranker</text></g>
-    <text x="0" y="410" class="m" font-size="15">hit@8: share of questions where the right article is among the 8 passages</text>
+  <svg class="d" viewBox="0 0 1000 420" role="img" aria-label="hit@8, share of questions with the right article among the 8 passages: baseline 0.60, with self-query 0.90, with metadata 0.95, with reranker 0.95; the reranker raises MRR from 0.75 to 0.91">
+    <line x1="70" y1="340" x2="1000" y2="340" stroke="var(--ink)" stroke-width="1.5"/><text x="58" y="345" text-anchor="end" class="t m" font-size="14">0.00</text>
+    <line x1="70" y1="265" x2="1000" y2="265" class="rule"/><text x="58" y="270" text-anchor="end" class="t m" font-size="14">0.25</text>
+    <line x1="70" y1="190" x2="1000" y2="190" class="rule"/><text x="58" y="195" text-anchor="end" class="t m" font-size="14">0.50</text>
+    <line x1="70" y1="115" x2="1000" y2="115" class="rule"/><text x="58" y="120" text-anchor="end" class="t m" font-size="14">0.75</text>
+    <line x1="70" y1="40" x2="1000" y2="40" class="rule"/><text x="58" y="45" text-anchor="end" class="t m" font-size="14">1.00</text>
+    <rect x="110" y="160" width="150" height="180" class="fill"><title>baseline: 0.600</title></rect><text x="185" y="150" text-anchor="middle" class="t b" font-size="20">0.60</text><text x="185" y="368" text-anchor="middle" font-size="16">baseline</text>
+    <rect x="340" y="70" width="150" height="270" class="fill"><title>+ self-query: 0.900</title></rect><text x="415" y="60" text-anchor="middle" class="t b" font-size="20">0.90</text><text x="415" y="368" text-anchor="middle" font-size="16">+ self-query</text>
+    <rect x="570" y="55" width="150" height="285" class="fill"><title>+ metadata in chunks: 0.950</title></rect><text x="645" y="45" text-anchor="middle" class="t b" font-size="20">0.95</text><text x="645" y="368" text-anchor="middle" font-size="16">+ metadata</text>
+    <rect x="800" y="55" width="150" height="285" fill="var(--accent)"><title>+ Polish reranker: hit@8 0.950, MRR 0.751 → 0.910</title></rect><text x="875" y="45" text-anchor="middle" class="t b" font-size="20">0.95</text><text x="875" y="368" text-anchor="middle" font-size="16">+ reranker</text><text x="875" y="390" text-anchor="middle" class="t r" font-size="14">MRR 0.75 → 0.91</text>
+    <text x="70" y="412" class="m" font-size="15">hit@8: right article among the 8 passages · MRR: how high it is ranked</text>
   </svg>
   <p class="foot">pilot index: 18,089 chunks from 3 sources</p>
 </section>
