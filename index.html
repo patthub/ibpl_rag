@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPBL RAG — examples</title>
+<style>
+:root {
+  --bg: #fbfaf7; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66;
+  --line: #e4e1da; --accent: #8a3b12; --accent-bg: #f6ebe3; --sel: #f1eee7;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161615; --panel: #1f1f1d; --ink: #ecebe6; --muted: #a09e97;
+          --line: #34332f; --accent: #e8a27a; --accent-bg: #3a2a20; --sel: #2a2926; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+       font: 16px/1.6 Georgia, "Iowan Old Style", serif; }
+header { max-width: 1100px; margin: 0 auto; padding: 32px 16px 8px; }
+h1 { font-size: 28px; margin: 0 0 8px; }
+header p { color: var(--muted); margin: 0 0 8px; max-width: 70ch; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid;
+       grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+nav { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto;
+      border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+nav button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line);
+             background: none; color: inherit; font: 15px/1.4 system-ui, sans-serif; padding: 10px 12px; cursor: pointer; }
+nav button:last-child { border-bottom: 0; }
+nav button[aria-current="true"] { background: var(--sel); font-weight: 600; }
+.tag { display: inline-block; font: 12px/1 system-ui, sans-serif; color: var(--accent);
+       background: var(--accent-bg); border-radius: 4px; padding: 3px 6px; margin-bottom: 4px; }
+article { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 24px; min-width: 0; }
+article h2 { font-size: 22px; margin: 4px 0 16px; }
+.answer { white-space: pre-wrap; overflow-wrap: anywhere; }
+.answer a { color: var(--accent); text-decoration: none; font: 600 13px system-ui, sans-serif; }
+.meta { color: var(--muted); font: 13px system-ui, sans-serif; margin-top: 12px; }
+h3 { font: 600 14px system-ui, sans-serif; text-transform: uppercase; letter-spacing: .04em;
+     color: var(--muted); margin: 28px 0 8px; }
+ol.src { padding-left: 28px; margin: 0; }
+ol.src li { margin: 6px 0; overflow-wrap: anywhere; }
+ol.src li:target { background: var(--accent-bg); }
+ol.src a { color: var(--ink); }
+ol.src small { color: var(--muted); font-family: system-ui, sans-serif; }
+details summary { cursor: pointer; color: var(--accent); font: 13px system-ui, sans-serif; }
+details p { font-size: 15px; border-left: 3px solid var(--line); padding-left: 12px; margin: 8px 0; }
+footer { max-width: 1100px; margin: 0 auto; padding: 8px 16px 40px; color: var(--muted); font: 13px system-ui, sans-serif; }
+@media (max-width: 760px) {
+  main { grid-template-columns: 1fr; }
+  nav { position: static; max-height: 40vh; }
+  article { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>iPBL RAG — example questions and answers</h1>
+  <p>The system answers questions about the Polish literary internet. For each question it retrieves
+  the 8 most relevant article fragments (hybrid search, filters extracted from the question,
+  a reranker), and a local language model, Gemma 4 E2B, writes an answer citing those sources.
+  The search runs on the original Polish questions; the sources are in Polish.</p>
+  <p><a href="prezentacja.html" style="color:var(--accent)">How it works — presentation →</a></p>
+  <p>These are real runs, not edited by hand — mistakes included.
+  Each source can be expanded to show the exact text the model received; the full article is behind the link.</p>
+</header>
+<main>
+  <nav id="list" aria-label="Questions"></nav>
+  <article id="view" aria-live="polite">Loading…</article>
+</main>
+<footer id="foot"></footer>
+<script>
+const TYPES = { przekrojowe: "person", temat: "topic", fakt: "fact", metadane: "author and date",
+                nazwisko: "author", "bez-tresci": "title", brak: "not in the corpus" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let rows = [];
+
+function show(i) {
+  const r = rows[i];
+  // [3] i [1, 4] w odpowiedzi -> odnośniki do listy źródeł
+  const answer = esc(r.answer || "(no answer)").replace(/\[([\d,\s]+)\]/g, (m, g) =>
+    "[" + g.split(",").map(n => n.trim()).map(n => `<a href="#s${i}-${n}">${n}</a>`).join(", ") + "]");
+  document.getElementById("view").innerHTML = `
+    ${r.type ? `<span class="tag">${esc(TYPES[r.type] || r.type)}</span>` : ""}
+    <h2>${esc(r.q_en || r.q)}</h2>
+    ${r.q_en ? `<div class="meta" style="margin:-8px 0 16px">original: ${esc(r.q)}</div>` : ""}
+    <div class="answer">${answer}</div>
+    <div class="meta">search ${r.t_search} s · writing the answer ${r.t_answer} s (MacBook Air M3)</div>
+    <h3>Sources</h3>
+    <ol class="src">${r.sources.map(s => `<li id="s${i}-${s.n}">
+      <a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title || s.link)}</a><br>
+      <small>${esc([s.author, s.date].filter(Boolean).join(" · "))}</small>
+      ${s.text ? `<details><summary>text the model received</summary><p class="answer">${esc(s.text)}</p></details>` : ""}</li>`).join("")}</ol>`;
+  document.querySelectorAll("nav button").forEach((b, j) => b.setAttribute("aria-current", j === i));
+  history.replaceState(null, "", "#" + r.id);
+}
+
+fetch("answers.json").then(r => r.json()).then(data => {
+  rows = data;
+  const nav = document.getElementById("list");
+  rows.forEach((r, i) => {
+    const b = document.createElement("button");
+    b.innerHTML = (r.type ? `<span class="tag">${esc(TYPES[r.type] || r.type)}</span><br>` : "") + esc(r.q_en || r.q);
+    b.onclick = () => { show(i); if (innerWidth <= 760) view.scrollIntoView(); };
+    nav.append(b);
+  });
+  const start = rows.findIndex(r => "#" + r.id === location.hash);
+  show(start < 0 ? 0 : start);
+  document.getElementById("foot").textContent = `${rows.length} questions`;
+}).catch(() => { document.getElementById("view").textContent = "Could not load answers.json."; });
+</script>
+</body>
+</html>
