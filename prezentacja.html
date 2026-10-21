@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPBL RAG — how it works</title>
+<style>
+:root {
+  --bg: #fbfaf7; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #d9d5cc;
+  --accent: #8a3b12; --accent-bg: #f6ebe3; --blue: #2f5f8a; --blue-bg: #e4edf5;
+  --green: #3d6b3a; --green-bg: #e6f0e3; --red: #a03030;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161615; --panel: #1f1f1d; --ink: #ecebe6; --muted: #a09e97; --line: #3d3c38;
+          --accent: #e8a27a; --accent-bg: #3a2a20; --blue: #8db8de; --blue-bg: #1f2c38;
+          --green: #9cc795; --green-bg: #1f2e1d; --red: #e08080; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden;
+             font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+section { position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center;
+          align-items: center; padding: 4vh 6vw 8vh; text-align: center; }
+section.on { display: flex; }
+h1 { font: 700 clamp(32px, 6vw, 72px)/1.1 Georgia, serif; margin: 0 0 2vh; }
+h2 { font: 700 clamp(24px, 3.6vw, 44px)/1.15 Georgia, serif; margin: 0 0 4vh; }
+.sub { font-size: clamp(16px, 2vw, 24px); color: var(--muted); margin: 0; }
+svg.d { width: min(92vw, 1100px); max-height: 66vh; height: auto; }
+svg text { fill: var(--ink); font-family: system-ui, sans-serif; }
+svg .m { fill: var(--muted); }
+svg .box { fill: var(--panel); stroke: var(--line); stroke-width: 2; }
+svg .acc { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2; }
+svg .blu { fill: var(--blue-bg); stroke: var(--blue); stroke-width: 2; }
+svg .grn { fill: var(--green-bg); stroke: var(--green); stroke-width: 2; }
+svg .arr { stroke: var(--muted); stroke-width: 2.5; fill: none; marker-end: url(#a); }
+svg .b { font-weight: 700; }
+svg .mono { font-family: ui-monospace, Menlo, monospace; }
+.big { display: flex; gap: 6vw; flex-wrap: wrap; justify-content: center; }
+.big div { min-width: 180px; }
+.big b { display: block; font: 700 clamp(48px, 8vw, 110px)/1 Georgia, serif; color: var(--accent); }
+.big b + span { display: block; margin-top: 10px; }
+.big span { font-size: clamp(16px, 1.8vw, 22px); color: var(--muted); }
+.cross { list-style: none; padding: 0; margin: 0; font-size: clamp(18px, 2.4vw, 30px); text-align: left; }
+.cross li { margin: 2.2vh 0; }
+.cross li::before { content: "✕"; color: var(--red); font-weight: 700; margin-right: 16px; }
+.cross small { color: var(--muted); font-size: .65em; margin-left: 8px; }
+a.go { font-size: clamp(20px, 2.6vw, 32px); color: var(--accent); }
+.note { position: absolute; bottom: 7vh; font-size: 13px; color: var(--muted); }
+#bar { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--accent); transition: width .2s; }
+#count { position: fixed; right: 16px; bottom: 12px; font-size: 13px; color: var(--muted); }
+#home { position: fixed; left: 16px; bottom: 12px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#8a877f"/></marker></defs></svg>
+
+<!-- 1 -->
+<section>
+  <h1>iPBL RAG</h1>
+  <p class="sub">Asking questions of the Polish literary internet</p>
+</section>
+
+<!-- 2: LLM alone vs with sources -->
+<section>
+  <h2>Why not just ask the model?</h2>
+  <svg class="d" viewBox="0 0 1000 420">
+    <text x="250" y="30" text-anchor="middle" class="b" font-size="22">Model alone</text>
+    <text x="750" y="30" text-anchor="middle" class="b" font-size="22">Model + sources</text>
+    <line x1="500" y1="10" x2="500" y2="410" stroke="var(--line)" stroke-width="2"/>
+    <rect class="box" x="40" y="60" width="420" height="70" rx="14"/>
+    <text x="60" y="102" font-size="18">“What did X write on her blog in 2024?”</text>
+    <rect class="box" x="40" y="160" width="420" height="200" rx="14" stroke-dasharray="6 6"/>
+    <text x="250" y="240" text-anchor="middle" font-size="64">?</text>
+    <text x="250" y="300" text-anchor="middle" class="m" font-size="18">never saw these texts</text>
+    <text x="250" y="328" text-anchor="middle" class="m" font-size="18">→ guesses, sounds confident</text>
+    <rect class="box" x="540" y="60" width="420" height="70" rx="14"/>
+    <text x="560" y="102" font-size="18">“What did X write on her blog in 2024?”</text>
+    <rect class="grn" x="540" y="160" width="420" height="200" rx="14"/>
+    <text x="560" y="205" font-size="18">She reviewed … [1]</text>
+    <text x="560" y="240" font-size="18">and wrote about … [3]</text>
+    <g font-size="15" class="m">
+      <rect class="box" x="560" y="270" width="120" height="70" rx="6"/><text x="575" y="312">[1] article</text>
+      <rect class="box" x="690" y="270" width="120" height="70" rx="6"/><text x="705" y="312">[2] article</text>
+      <rect class="box" x="820" y="270" width="120" height="70" rx="6"/><text x="835" y="312">[3] article</text>
+    </g>
+  </svg>
+</section>
+
+<!-- 3: R A G -->
+<section>
+  <h2>Retrieval-Augmented Generation</h2>
+  <svg class="d" viewBox="0 0 1000 300">
+    <rect class="blu" x="20" y="40" width="270" height="200" rx="18"/>
+    <text x="155" y="130" text-anchor="middle" font-size="64" class="b">R</text>
+    <text x="155" y="185" text-anchor="middle" font-size="22">find</text>
+    <text x="155" y="214" text-anchor="middle" class="m" font-size="16">relevant fragments</text>
+    <path class="arr" d="M300 140 H355"/>
+    <rect class="acc" x="365" y="40" width="270" height="200" rx="18"/>
+    <text x="500" y="130" text-anchor="middle" font-size="64" class="b">A</text>
+    <text x="500" y="185" text-anchor="middle" font-size="22">paste</text>
+    <text x="500" y="214" text-anchor="middle" class="m" font-size="16">them into the prompt</text>
+    <path class="arr" d="M645 140 H700"/>
+    <rect class="grn" x="710" y="40" width="270" height="200" rx="18"/>
+    <text x="845" y="130" text-anchor="middle" font-size="64" class="b">G</text>
+    <text x="845" y="185" text-anchor="middle" font-size="22">write</text>
+    <text x="845" y="214" text-anchor="middle" class="m" font-size="16">an answer with citations</text>
+  </svg>
+</section>
+
+<!-- 4: indexing -->
+<section>
+  <h2>Step 0: build the index (once)</h2>
+  <svg class="d" viewBox="0 0 1000 340">
+    <g font-size="18" text-anchor="middle">
+      <rect class="box" x="10" y="60" width="200" height="180" rx="14"/>
+      <rect class="box" x="22" y="74" width="176" height="40" rx="4"/><rect class="box" x="22" y="124" width="176" height="40" rx="4"/><rect class="box" x="22" y="174" width="176" height="40" rx="4"/>
+      <text x="110" y="290" class="b">articles</text><text x="110" y="316" class="m" font-size="15">blogs, journals, sites</text>
+      <path class="arr" d="M220 150 H265"/>
+      <g><rect class="box" x="275" y="60" width="200" height="180" rx="14"/>
+        <rect class="acc" x="290" y="76" width="80" height="28" rx="3"/><rect class="acc" x="378" y="76" width="82" height="28" rx="3"/>
+        <rect class="acc" x="290" y="112" width="120" height="28" rx="3"/><rect class="acc" x="418" y="112" width="42" height="28" rx="3"/>
+        <rect class="acc" x="290" y="148" width="60" height="28" rx="3"/><rect class="acc" x="358" y="148" width="102" height="28" rx="3"/>
+        <rect class="acc" x="290" y="184" width="170" height="28" rx="3"/></g>
+      <text x="375" y="290" class="b">chunks</text><text x="375" y="316" class="m" font-size="15">1,000 characters + title, author, date</text>
+      <path class="arr" d="M485 150 H530"/>
+      <rect class="box" x="540" y="60" width="200" height="180" rx="14"/>
+      <text x="640" y="118" class="mono" font-size="15">[0.12, −0.48,</text>
+      <text x="640" y="146" class="mono" font-size="15">0.03, 0.91,</text>
+      <text x="640" y="174" class="mono" font-size="15">… 1024 numbers]</text>
+      <text x="640" y="290" class="b">vectors</text><text x="640" y="316" class="m" font-size="15">bge-m3 embedding model</text>
+      <path class="arr" d="M750 150 H795"/>
+      <ellipse class="blu" cx="900" cy="80" rx="90" ry="22"/>
+      <path class="blu" d="M810 80 V220 A90 22 0 0 0 990 220 V80"/>
+      <ellipse cx="900" cy="80" rx="90" ry="22" fill="none" stroke="var(--blue)" stroke-width="2"/>
+      <text x="900" y="290" class="b">LanceDB</text><text x="900" y="316" class="m" font-size="15">on the laptop's disk</text>
+    </g>
+  </svg>
+  <div class="big" style="margin-top:2vh">
+    <div><b style="font-size:clamp(28px,4vw,52px)">29</b><span>sources</span></div>
+    <div><b style="font-size:clamp(28px,4vw,52px)">97,394</b><span>chunks in this demo</span></div>
+    <div><b style="font-size:clamp(28px,4vw,52px)">2.7 M</b><span>chunks in the full corpus</span></div>
+  </div>
+</section>
+
+<!-- 5: meaning map -->
+<section>
+  <h2>A vector = a place on a map of meaning</h2>
+  <svg class="d" viewBox="0 0 1000 440">
+    <rect class="box" x="10" y="10" width="980" height="420" rx="16"/>
+    <g fill="var(--blue)">
+      <circle cx="180" cy="120" r="9"/><circle cx="220" cy="90" r="9"/><circle cx="240" cy="140" r="9"/><circle cx="160" cy="170" r="9"/><circle cx="270" cy="105" r="9"/>
+    </g><text x="215" y="215" text-anchor="middle" font-size="20">poetry</text>
+    <g fill="var(--green)">
+      <circle cx="720" cy="110" r="9"/><circle cx="760" cy="80" r="9"/><circle cx="790" cy="130" r="9"/><circle cx="740" cy="160" r="9"/>
+    </g><text x="755" y="205" text-anchor="middle" font-size="20">theatre</text>
+    <g fill="var(--accent)">
+      <circle cx="430" cy="320" r="9"/><circle cx="470" cy="290" r="9"/><circle cx="500" cy="340" r="9"/><circle cx="455" cy="360" r="9"/><circle cx="530" cy="305" r="9"/>
+    </g><text x="480" y="400" text-anchor="middle" font-size="20">war in Ukraine</text>
+    <g fill="var(--muted)"><circle cx="850" cy="350" r="9"/><circle cx="880" cy="320" r="9"/><circle cx="830" cy="300" r="9"/></g>
+    <text x="860" y="395" text-anchor="middle" font-size="20">publishing</text>
+    <path d="M560 210 l12 -24 l12 24 l-12 24 z" fill="var(--ink)"/>
+    <text x="592" y="200" font-size="18" class="b">question</text>
+    <text x="592" y="224" font-size="16" class="m">“What was written about the war?”</text>
+    <circle cx="480" cy="325" r="120" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="8 6"/>
+    <path class="arr" d="M560 225 L545 270"/>
+  </svg>
+  <p class="note">illustration — real vectors have 1024 dimensions, not 2</p>
+</section>
+
+<!-- 6: our pipeline -->
+<section>
+  <h2>What happens when you ask</h2>
+  <svg class="d" viewBox="0 0 1100 470">
+    <g font-size="17" text-anchor="middle">
+      <rect class="box" x="10" y="190" width="150" height="90" rx="14"/>
+      <text x="85" y="232" class="b">question</text><text x="85" y="258" class="m" font-size="14">in Polish</text>
+      <path class="arr" d="M168 235 H200"/>
+      <rect class="acc" x="208" y="190" width="170" height="90" rx="14"/>
+      <text x="293" y="228" class="b">1 · self-query</text><text x="293" y="254" class="m" font-size="14">LLM pulls out</text><text x="293" y="272" class="m" font-size="14">author, date</text>
+      <path class="arr" d="M386 235 H418"/>
+      <rect class="blu" x="426" y="80" width="170" height="90" rx="14"/>
+      <text x="511" y="118" class="b">meaning</text><text x="511" y="144" class="m" font-size="14">vectors</text>
+      <rect class="blu" x="426" y="300" width="170" height="90" rx="14"/>
+      <text x="511" y="338" class="b">keywords</text><text x="511" y="364" class="m" font-size="14">BM25</text>
+      <text x="511" y="240" class="b">2 · hybrid</text>
+      <path class="arr" d="M386 225 Q405 125 418 125"/><path class="arr" d="M386 245 Q405 345 418 345"/>
+      <path class="arr" d="M604 125 Q640 125 650 215"/><path class="arr" d="M604 345 Q640 345 650 255"/>
+      <rect class="blu" x="658" y="190" width="120" height="90" rx="14"/>
+      <text x="718" y="228" class="b">merge</text><text x="718" y="254" class="m" font-size="14">40 candidates</text>
+      <path class="arr" d="M786 235 H818"/>
+      <rect class="acc" x="826" y="190" width="120" height="90" rx="14"/>
+      <text x="886" y="228" class="b">3 · rerank</text><text x="886" y="254" class="m" font-size="14">→ best 8</text>
+      <path class="arr" d="M886 288 V330"/>
+      <rect class="grn" x="801" y="338" width="170" height="90" rx="14"/>
+      <text x="886" y="376" class="b">4 · Gemma</text><text x="886" y="402" class="m" font-size="14">answer + [1]…[8]</text>
+    </g>
+  </svg>
+</section>
+
+<!-- 7: self-query -->
+<section>
+  <h2>1 · Self-query: split the question</h2>
+  <svg class="d" viewBox="0 0 1000 380">
+    <text x="500" y="50" text-anchor="middle" font-size="26">“Jakie teksty <tspan fill="var(--accent)" class="b">Jacka Hajduka</tspan> ukazały się w <tspan fill="var(--accent)" class="b">2026</tspan> roku?”</text>
+    <path class="arr" d="M500 80 V120"/>
+    <rect class="acc" x="80" y="135" width="400" height="200" rx="14"/>
+    <text x="280" y="175" text-anchor="middle" class="b" font-size="20">filters — exact</text>
+    <text x="110" y="225" class="mono" font-size="18">author = Jacek Hajduk</text>
+    <text x="110" y="260" class="mono" font-size="18">date  ≥ 2026-01-01</text>
+    <text x="110" y="295" class="mono" font-size="18">date  ≤ 2026-12-31</text>
+    <rect class="blu" x="520" y="135" width="400" height="200" rx="14"/>
+    <text x="720" y="175" text-anchor="middle" class="b" font-size="20">content — by meaning</text>
+    <text x="720" y="260" text-anchor="middle" class="mono" font-size="22">“teksty”</text>
+  </svg>
+</section>
+
+<!-- 8: hybrid + RRF -->
+<section>
+  <h2>2 · Two searches, one list</h2>
+  <svg class="d" viewBox="0 0 1000 400">
+    <g font-size="17">
+      <text x="140" y="40" text-anchor="middle" class="b">meaning</text>
+      <text x="500" y="40" text-anchor="middle" class="b">keywords</text>
+      <text x="860" y="40" text-anchor="middle" class="b">merged</text>
+      <g>
+        <rect class="blu" x="40" y="60" width="200" height="50" rx="8"/><text x="60" y="92">1 · text A</text>
+        <rect class="blu" x="40" y="120" width="200" height="50" rx="8"/><text x="60" y="152">2 · text B</text>
+        <rect class="blu" x="40" y="180" width="200" height="50" rx="8"/><text x="60" y="212">3 · text C</text>
+      </g>
+      <g>
+        <rect class="blu" x="400" y="60" width="200" height="50" rx="8"/><text x="420" y="92">1 · text C</text>
+        <rect class="blu" x="400" y="120" width="200" height="50" rx="8"/><text x="420" y="152">2 · text A</text>
+        <rect class="blu" x="400" y="180" width="200" height="50" rx="8"/><text x="420" y="212">3 · text D</text>
+      </g>
+      <path class="arr" d="M140 238 C140 330 700 330 752 178"/><path class="arr" d="M610 145 H740"/>
+      <g>
+        <rect class="acc" x="760" y="60" width="200" height="50" rx="8"/><text x="780" y="92">text A</text>
+        <rect class="acc" x="760" y="120" width="200" height="50" rx="8"/><text x="780" y="152">text C</text>
+        <rect class="box" x="760" y="180" width="200" height="50" rx="8"/><text x="780" y="212">text B</text>
+        <rect class="box" x="760" y="240" width="200" height="50" rx="8"/><text x="780" y="272">text D</text>
+      </g>
+    </g>
+    <text x="500" y="360" text-anchor="middle" class="mono" font-size="24">score = Σ 1 / (60 + rank)</text>
+  </svg>
+  <p class="note">Reciprocal Rank Fusion: only positions count, not the raw scores</p>
+</section>
+
+<!-- 9: reranker -->
+<section>
+  <h2>3 · Rerank: read question and text together</h2>
+  <svg class="d" viewBox="0 0 1000 380">
+    <g font-size="18" text-anchor="middle">
+      <text x="250" y="36" class="b">search (fast, rough)</text>
+      <rect class="box" x="40" y="70" width="140" height="56" rx="8"/><text x="110" y="104">question</text>
+      <rect class="box" x="40" y="200" width="140" height="56" rx="8"/><text x="110" y="234">text</text>
+      <path class="arr" d="M188 98 H240"/><path class="arr" d="M188 228 H240"/>
+      <rect class="blu" x="248" y="70" width="90" height="56" rx="8"/><text x="293" y="104">model</text>
+      <rect class="blu" x="248" y="200" width="90" height="56" rx="8"/><text x="293" y="234">model</text>
+      <path class="arr" d="M346 98 Q400 98 410 150"/><path class="arr" d="M346 228 Q400 228 410 180"/>
+      <text x="440" y="172" font-size="16" class="m">compare</text>
+      <line x1="510" y1="20" x2="510" y2="360" stroke="var(--line)" stroke-width="2"/>
+      <text x="760" y="36" class="b">reranker (slow, precise)</text>
+      <rect class="box" x="560" y="110" width="200" height="56" rx="8"/><text x="660" y="144">question + text</text>
+      <path class="arr" d="M768 138 H810"/>
+      <rect class="acc" x="818" y="110" width="110" height="56" rx="8"/><text x="873" y="144">model</text>
+      <path class="arr" d="M873 174 V220"/>
+      <text x="873" y="260" class="b" font-size="30">0.93</text>
+      <text x="760" y="320" class="m" font-size="16">40 pairs → best 8</text>
+    </g>
+  </svg>
+  <p class="note">sdadas/polish-reranker-roberta-v3</p>
+</section>
+
+<!-- 10: prompt -->
+<section>
+  <h2>4 · What the model actually sees</h2>
+  <svg class="d" viewBox="0 0 1000 420">
+    <rect class="box" x="60" y="20" width="560" height="380" rx="14"/>
+    <g font-size="17" class="mono">
+      <rect class="acc" x="80" y="40" width="520" height="60" rx="6"/>
+      <text x="96" y="66">answer ONLY from the sources,</text><text x="96" y="88">cite [n], else say “not found”</text>
+      <g class="m">
+        <rect class="box" x="80" y="115" width="520" height="34" rx="4"/><text x="96" y="138">[1] title · author · date · text…</text>
+        <rect class="box" x="80" y="155" width="520" height="34" rx="4"/><text x="96" y="178">[2] title · author · date · text…</text>
+        <text x="96" y="218">⋮</text>
+        <rect class="box" x="80" y="235" width="520" height="34" rx="4"/><text x="96" y="258">[8] title · author · date · text…</text>
+      </g>
+      <rect class="blu" x="80" y="300" width="520" height="80" rx="6"/>
+      <text x="96" y="347">question</text>
+    </g>
+    <path class="arr" d="M630 210 H690"/>
+    <rect class="grn" x="700" y="110" width="260" height="200" rx="14"/>
+    <text x="720" y="170" font-size="18">… [1] …</text>
+    <text x="720" y="205" font-size="18">… [3, 5] …</text>
+    <text x="830" y="270" text-anchor="middle" class="b" font-size="18">Gemma 4 E2B</text>
+  </svg>
+</section>
+
+<!-- 11: retrieval chart -->
+<section>
+  <h2>Each step measured</h2>
+  <svg class="d" viewBox="0 0 1000 440" role="img" aria-label="Correct article among the 8 sources: baseline 60%, self-query 90%, metadata in chunks 95%, reranker 100%">
+    <g stroke="var(--line)" stroke-width="1">
+      <line x1="80" y1="360" x2="960" y2="360"/><line x1="80" y1="210" x2="960" y2="210" stroke-dasharray="4 6"/><line x1="80" y1="60" x2="960" y2="60" stroke-dasharray="4 6"/>
+    </g>
+    <g class="m" font-size="14" text-anchor="end"><text x="70" y="365">0%</text><text x="70" y="215">50%</text><text x="70" y="65">100%</text></g>
+    <g fill="var(--accent)">
+      <path d="M130 360 V184 a4 4 0 0 1 4 -4 h132 a4 4 0 0 1 4 4 V360 z"><title>baseline: 0.600</title></path>
+      <path d="M350 360 V94 a4 4 0 0 1 4 -4 h132 a4 4 0 0 1 4 4 V360 z"><title>+ self-query: 0.900</title></path>
+      <path d="M570 360 V79 a4 4 0 0 1 4 -4 h132 a4 4 0 0 1 4 4 V360 z"><title>+ metadata in chunks: 0.950</title></path>
+      <path d="M790 360 V64 a4 4 0 0 1 4 -4 h132 a4 4 0 0 1 4 4 V360 z"><title>+ reranker: 1.000</title></path>
+    </g>
+    <g text-anchor="middle" font-size="22" class="b"><text x="200" y="170">60%</text><text x="420" y="80">90%</text><text x="640" y="65">95%</text><text x="860" y="50">100%</text></g>
+    <g text-anchor="middle" font-size="16"><text x="200" y="390">baseline</text><text x="420" y="390">+ self-query</text><text x="640" y="390">+ metadata</text><text x="860" y="390">+ reranker</text></g>
+    <text x="520" y="428" text-anchor="middle" class="m" font-size="15">correct article among the 8 sources (hit@8)</text>
+  </svg>
+  <p class="note">pilot index: 18,089 chunks, 3 sources</p>
+</section>
+
+<!-- 12: answer quality -->
+<section>
+  <h2>And the answers?</h2>
+  <div class="big">
+    <div><b>88%</b><span>of claims backed by the sources</span></div>
+    <div><b>7 / 8</b><span>“not found” when it isn't there</span></div>
+    <div><b>~1 min</b><span>per answer, on a laptop</span></div>
+  </div>
+  <p class="note">52 questions, 249 claims checked one by one</p>
+</section>
+
+<!-- 13: laptop -->
+<section>
+  <h2>Everything runs locally</h2>
+  <svg class="d" viewBox="0 0 1000 360">
+    <rect class="box" x="200" y="30" width="600" height="260" rx="18"/>
+    <path d="M140 300 H860 L820 330 H180 Z" class="box"/>
+    <g font-size="18" text-anchor="middle">
+      <rect class="blu" x="230" y="60" width="170" height="90" rx="10"/><text x="315" y="100" class="b">bge-m3</text><text x="315" y="126" class="m" font-size="14">embeddings</text>
+      <rect class="acc" x="415" y="60" width="170" height="90" rx="10"/><text x="500" y="100" class="b">reranker</text><text x="500" y="126" class="m" font-size="14">polish-roberta</text>
+      <rect class="grn" x="600" y="60" width="170" height="90" rx="10"/><text x="685" y="100" class="b">Gemma 4 E2B</text><text x="685" y="126" class="m" font-size="14">LLM, 4-bit</text>
+      <rect class="box" x="230" y="170" width="540" height="90" rx="10"/><text x="500" y="210" class="b">LanceDB</text><text x="500" y="236" class="m" font-size="14">vectors read from disk, not RAM</text>
+    </g>
+  </svg>
+  <p class="sub">MacBook Air M3 · 16 GB · no cloud at question time</p>
+</section>
+
+<!-- 14: what didn't work -->
+<section>
+  <h2>What did not work</h2>
+  <ul class="cross">
+    <li>Rewriting the question several ways<small>multi-query: worse than baseline</small></li>
+    <li>Polish embedding models<small>worse than multilingual bge-m3</small></li>
+    <li>Extra rules in the prompt<small>no significant effect</small></li>
+    <li>Telling author from subject<small>the model still mixes them up</small></li>
+  </ul>
+</section>
+
+<!-- 15 -->
+<section>
+  <h1>Try it</h1>
+  <a class="go" href="./">24 real questions and answers →</a>
+</section>
+
+<div id="bar"></div>
+<a id="home" href="./">examples</a>
+<div id="count"></div>
+<script>
+const S = [...document.querySelectorAll("section")];
+let i = Math.min(Math.max(+location.hash.slice(1) - 1 || 0, 0), S.length - 1);
+function go(n) {
+  i = Math.min(Math.max(n, 0), S.length - 1);
+  S.forEach((s, j) => s.classList.toggle("on", j === i));
+  document.getElementById("bar").style.width = (100 * (i + 1) / S.length) + "%";
+  document.getElementById("count").textContent = `${i + 1} / ${S.length}`;
+  history.replaceState(null, "", "#" + (i + 1));
+}
+addEventListener("keydown", e => {
+  if (["ArrowRight", "ArrowDown", " ", "PageDown"].includes(e.key)) { e.preventDefault(); go(i + 1); }
+  if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) { e.preventDefault(); go(i - 1); }
+  if (e.key === "Home") go(0);
+  if (e.key === "End") go(S.length - 1);
+});
+addEventListener("click", e => { if (!e.target.closest("a")) go(i + (e.clientX > innerWidth / 3 ? 1 : -1)); });
+let x0 = null;
+addEventListener("touchstart", e => x0 = e.touches[0].clientX, { passive: true });
+addEventListener("touchend", e => { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1)); });
+go(i);
+</script>
+</body>
+</html>
