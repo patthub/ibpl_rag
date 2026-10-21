@@ -39,6 +39,19 @@ svg .rule { stroke: var(--rule); stroke-width: 1; }
 .nums span { display: block; margin-top: 10px; font-size: clamp(15px, 1.6vw, 20px); color: var(--muted); }
 table.rows { border-collapse: collapse; font-size: clamp(17px, 2vw, 26px); max-width: 1100px; }
 table.rows td { padding: 2.2vh 3vw 2.2vh 0; border-top: 1px solid var(--rule); vertical-align: baseline; }
+table.stack { font-size: clamp(16px, 1.7vw, 22px); }
+table.rows.stack td, table.rows.stack th { padding-top: 1.3vh; padding-bottom: 1.3vh; }
+table.rows th { font: 500 12px "IBM Plex Mono", monospace; color: var(--muted); letter-spacing: .06em; text-align: left;
+                padding: 2.2vh 3vw 2.2vh 0; border-top: 1px solid var(--rule); vertical-align: baseline; }
+table.rows th:empty { border-top-color: transparent; }
+@media (max-width: 640px) {
+  section { padding: 9vh 16px; }
+  #home { left: 16px; } #count { right: 16px; }
+  h2 { overflow-wrap: anywhere; }
+  table.rows th { display: none; }
+  table.rows td, table.rows.stack td { display: block; padding: 0; border: 0; }
+  table.rows tr { display: block; padding: 6px 0; border-top: 1px solid var(--rule); }
+}
 table.rows td + td { font-family: "IBM Plex Mono", monospace; font-size: .7em; color: var(--muted); }
 a { color: var(--accent); }
 .foot { position: absolute; left: 7vw; bottom: 4vh; margin: 0; font: 13px "IBM Plex Mono", monospace; color: var(--muted); }
@@ -274,13 +287,16 @@ a { color: var(--accent); }
 </section>
 
 <section>
-  <h2>Hardware</h2>
-  <table class="rows">
-    <tr><td>MacBook Air M3, 16 GB</td><td>no GPU server, no API calls</td></tr>
-    <tr><td>Gemma 4 E2B</td><td>4-bit, llama.cpp</td></tr>
-    <tr><td>bge-m3</td><td>embeddings</td></tr>
-    <tr><td>polish-reranker-roberta-v3</td><td>reranking</td></tr>
-    <tr><td>LanceDB</td><td>vectors read from disk</td></tr>
+  <h2>Hardware, models, algorithms</h2>
+  <table class="rows stack">
+    <tr><th>HARDWARE</th><td>MacBook Air M3, 16 GB</td><td>no GPU server, no API calls</td></tr>
+    <tr><th>MODELS</th><td>Gemma 4 E2B</td><td>writes filters and answers; 4-bit, llama.cpp</td></tr>
+    <tr><th></th><td>bge-m3</td><td>embeddings, 1024 dimensions</td></tr>
+    <tr><th></th><td>polish-reranker-roberta-v3</td><td>reranking</td></tr>
+    <tr><th>ALGORITHMS</th><td>BM25</td><td>keyword search</td></tr>
+    <tr><th></th><td>Reciprocal rank fusion</td><td>merges the vector and BM25 lists</td></tr>
+    <tr><th></th><td>One passage per article</td><td>the model gets 8 different articles</td></tr>
+    <tr><th>STORAGE</th><td>LanceDB</td><td>vectors and full-text index, read from disk</td></tr>
   </table>
 </section>
 
