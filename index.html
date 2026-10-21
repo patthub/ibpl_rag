@@ -3,74 +3,78 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>iPBL RAG — examples</title>
+<title>iPBL RAG: examples</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #fbfaf7; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66;
-  --line: #e4e1da; --accent: #8a3b12; --accent-bg: #f6ebe3; --sel: #f1eee7;
-}
+:root { --bg: #ffffff; --ink: #111111; --muted: #6e6e6e; --rule: #dcdcdc; --accent: #d4281c; --mark: #fff1ef; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #161615; --panel: #1f1f1d; --ink: #ecebe6; --muted: #a09e97;
-          --line: #34332f; --accent: #e8a27a; --accent-bg: #3a2a20; --sel: #2a2926; }
+  :root { --bg: #111111; --ink: #f2f2f2; --muted: #9a9a9a; --rule: #333333; --accent: #ff5a47; --mark: #2a1513; }
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink);
-       font: 16px/1.6 Georgia, "Iowan Old Style", serif; }
-header { max-width: 1100px; margin: 0 auto; padding: 32px 16px 8px; }
-h1 { font-size: 28px; margin: 0 0 8px; }
-header p { color: var(--muted); margin: 0 0 8px; max-width: 70ch; }
-main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid;
-       grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
-nav { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto;
-      border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-nav button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line);
-             background: none; color: inherit; font: 15px/1.4 system-ui, sans-serif; padding: 10px 12px; cursor: pointer; }
-nav button:last-child { border-bottom: 0; }
-nav button[aria-current="true"] { background: var(--sel); font-weight: 600; }
-.tag { display: inline-block; font: 12px/1 system-ui, sans-serif; color: var(--accent);
-       background: var(--accent-bg); border-radius: 4px; padding: 3px 6px; margin-bottom: 4px; }
-article { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 24px; min-width: 0; }
-article h2 { font-size: 22px; margin: 4px 0 16px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 "IBM Plex Sans", system-ui, sans-serif; }
+.mono, .label, .meta, ol.src small, details summary, footer, nav .n { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 16px; }
+header { padding: 40px 0 28px; border-bottom: 2px solid var(--ink); }
+h1 { font-size: 32px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 12px; }
+header p { margin: 0 0 8px; max-width: 68ch; color: var(--muted); }
+a { color: var(--accent); }
+main { display: grid; grid-template-columns: 360px 1fr; gap: 48px; align-items: start; padding: 28px 0 48px; }
+nav { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+nav button { display: grid; grid-template-columns: 32px 1fr; width: 100%; text-align: left; border: 0;
+             border-top: 1px solid var(--rule); background: none; color: inherit; font: inherit; font-size: 15px;
+             line-height: 1.4; padding: 10px 0; cursor: pointer; }
+nav button:hover .q { text-decoration: underline; }
+nav .n { color: var(--muted); font-size: 13px; padding-top: 2px; }
+nav button[aria-current="true"] .n { color: var(--accent); }
+nav button[aria-current="true"] .q { font-weight: 600; }
+.label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+article { min-width: 0; max-width: 72ch; }
+article h2 { font-size: 26px; font-weight: 600; line-height: 1.25; margin: 6px 0 6px; }
+.orig { color: var(--muted); margin: 0 0 24px; }
 .answer { white-space: pre-wrap; overflow-wrap: anywhere; }
-.answer a { color: var(--accent); text-decoration: none; font: 600 13px system-ui, sans-serif; }
-.meta { color: var(--muted); font: 13px system-ui, sans-serif; margin-top: 12px; }
-h3 { font: 600 14px system-ui, sans-serif; text-transform: uppercase; letter-spacing: .04em;
-     color: var(--muted); margin: 28px 0 8px; }
-ol.src { padding-left: 28px; margin: 0; }
-ol.src li { margin: 6px 0; overflow-wrap: anywhere; }
-ol.src li:target { background: var(--accent-bg); }
-ol.src a { color: var(--ink); }
-ol.src small { color: var(--muted); font-family: system-ui, sans-serif; }
-details summary { cursor: pointer; color: var(--accent); font: 13px system-ui, sans-serif; }
-details p { font-size: 15px; border-left: 3px solid var(--line); padding-left: 12px; margin: 8px 0; }
-footer { max-width: 1100px; margin: 0 auto; padding: 8px 16px 40px; color: var(--muted); font: 13px system-ui, sans-serif; }
-@media (max-width: 760px) {
-  main { grid-template-columns: 1fr; }
-  nav { position: static; max-height: 40vh; }
-  article { padding: 16px; }
+.answer a { color: var(--accent); text-decoration: none; font-family: "IBM Plex Mono", monospace; font-size: 14px; }
+.meta { color: var(--muted); font-size: 13px; margin-top: 16px; }
+h3 { font: 500 12px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+     margin: 36px 0 0; padding-bottom: 8px; border-bottom: 1px solid var(--ink); }
+ol.src { list-style: none; padding: 0; margin: 0; counter-reset: s; }
+ol.src li { counter-increment: s; display: grid; grid-template-columns: 32px 1fr; padding: 12px 0;
+            border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+ol.src li::before { content: "[" counter(s) "]"; font: 13px "IBM Plex Mono", monospace; color: var(--accent); padding-top: 3px; }
+ol.src li:target { background: var(--mark); }
+ol.src a { color: var(--ink); text-decoration-color: var(--rule); }
+ol.src small { display: block; color: var(--muted); font-size: 13px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-top: 4px; }
+details p { font-size: 15px; margin: 8px 0 4px; padding-left: 12px; border-left: 2px solid var(--rule); }
+footer { border-top: 1px solid var(--rule); padding: 16px 0 40px; color: var(--muted); font-size: 13px; }
+@media (max-width: 800px) {
+  main { grid-template-columns: 1fr; gap: 24px; }
+  nav { position: static; max-height: 45vh; border-bottom: 2px solid var(--ink); }
 }
 </style>
 </head>
 <body>
+<div class="wrap">
 <header>
-  <h1>iPBL RAG — example questions and answers</h1>
-  <p>The system answers questions about the Polish literary internet. For each question it retrieves
-  the 8 most relevant article fragments (hybrid search, filters extracted from the question,
-  a reranker), and a local language model, Gemma 4 E2B, writes an answer citing those sources.
-  The search runs on the original Polish questions; the sources are in Polish.</p>
-  <p><a href="prezentacja.html" style="color:var(--accent)">How it works — presentation →</a></p>
-  <p>These are real runs, not edited by hand — mistakes included.
-  Each source can be expanded to show the exact text the model received; the full article is behind the link.</p>
+  <h1>iPBL RAG: example answers</h1>
+  <p>Twenty-four questions about texts from Polish literary blogs and online magazines (the iPBL collection).
+  For each question the system retrieved eight passages, and Gemma 4 E2B, running on a laptop, wrote the answer from them.
+  Answers are printed as generated, without corrections.</p>
+  <p>The questions were asked in Polish and translated here. Every source can be opened to show the passage the model was given.</p>
+  <p><a href="prezentacja.html">Slides: how the system works</a></p>
 </header>
 <main>
   <nav id="list" aria-label="Questions"></nav>
   <article id="view" aria-live="polite">Loading…</article>
 </main>
 <footer id="foot"></footer>
+</div>
 <script>
 const TYPES = { przekrojowe: "person", temat: "topic", fakt: "fact", metadane: "author and date",
                 nazwisko: "author", "bez-tresci": "title", brak: "not in the corpus" };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const pad = i => String(i + 1).padStart(2, "0");
 let rows = [];
 
 function show(i) {
@@ -80,16 +84,16 @@ function show(i) {
   const answer = esc(r.answer || "(no answer)").replace(/^(\s*)\*\s+/gm, "$1• ").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([\d,\s]+)\]/g, (m, g) =>
     "[" + g.split(",").map(n => n.trim()).map(n => `<a href="#s${i}-${n}">${n}</a>`).join(", ") + "]");
   document.getElementById("view").innerHTML = `
-    ${r.type ? `<span class="tag">${esc(TYPES[r.type] || r.type)}</span>` : ""}
+    <span class="label">${pad(i)}${r.type ? " · " + esc(TYPES[r.type] || r.type) : ""}</span>
     <h2>${esc(r.q_en || r.q)}</h2>
-    ${r.q_en ? `<div class="meta" style="margin:-8px 0 16px">original: ${esc(r.q)}</div>` : ""}
+    ${r.q_en ? `<p class="orig" lang="pl">${esc(r.q)}</p>` : ""}
     <div class="answer">${answer}</div>
-    <div class="meta">search ${r.t_search} s · writing the answer ${r.t_answer} s (MacBook Air M3)</div>
+    <div class="meta">retrieval ${r.t_search} s, answer ${r.t_answer} s</div>
     <h3>Sources</h3>
-    <ol class="src">${r.sources.map(s => `<li id="s${i}-${s.n}">
-      <a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title || s.link)}</a><br>
-      <small>${esc([s.author, s.date].filter(Boolean).join(" · "))}</small>
-      ${s.text ? `<details><summary>text the model received</summary><p class="answer">${esc(s.text)}</p></details>` : ""}</li>`).join("")}</ol>`;
+    <ol class="src">${r.sources.map(s => `<li id="s${i}-${s.n}"><div>
+      <a href="${esc(s.link)}" target="_blank" rel="noopener" lang="pl">${esc(s.title || s.link)}</a>
+      <small>${esc([s.author, s.date].filter(Boolean).join(", "))}</small>
+      ${s.text ? `<details><summary>passage</summary><p class="answer" lang="pl">${esc(s.text)}</p></details>` : ""}</div></li>`).join("")}</ol>`;
   document.querySelectorAll("nav button").forEach((b, j) => b.setAttribute("aria-current", j === i));
   history.replaceState(null, "", "#" + r.id);
 }
@@ -99,13 +103,13 @@ fetch("answers.json").then(r => r.json()).then(data => {
   const nav = document.getElementById("list");
   rows.forEach((r, i) => {
     const b = document.createElement("button");
-    b.innerHTML = (r.type ? `<span class="tag">${esc(TYPES[r.type] || r.type)}</span><br>` : "") + esc(r.q_en || r.q);
-    b.onclick = () => { show(i); if (innerWidth <= 760) view.scrollIntoView(); };
+    b.innerHTML = `<span class="n">${pad(i)}</span><span class="q">${esc(r.q_en || r.q)}</span>`;
+    b.onclick = () => { show(i); if (innerWidth <= 800) view.scrollIntoView(); };
     nav.append(b);
   });
   const start = rows.findIndex(r => "#" + r.id === location.hash);
   show(start < 0 ? 0 : start);
-  document.getElementById("foot").textContent = `${rows.length} questions`;
+  document.getElementById("foot").textContent = "Retrieval: hybrid search with self-query filters and a Polish reranker. Times measured on a MacBook Air M3.";
 }).catch(() => { document.getElementById("view").textContent = "Could not load answers.json."; });
 </script>
 </body>
