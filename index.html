@@ -76,7 +76,8 @@ let rows = [];
 function show(i) {
   const r = rows[i];
   // [3] i [1, 4] w odpowiedzi -> odnośniki do listy źródeł
-  const answer = esc(r.answer || "(no answer)").replace(/\[([\d,\s]+)\]/g, (m, g) =>
+  // ponytail: z Markdownu modelu tylko punktory i pogrubienie
+  const answer = esc(r.answer || "(no answer)").replace(/^(\s*)\*\s+/gm, "$1• ").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([\d,\s]+)\]/g, (m, g) =>
     "[" + g.split(",").map(n => n.trim()).map(n => `<a href="#s${i}-${n}">${n}</a>`).join(", ") + "]");
   document.getElementById("view").innerHTML = `
     ${r.type ? `<span class="tag">${esc(TYPES[r.type] || r.type)}</span>` : ""}
