@@ -204,17 +204,18 @@ a { color: var(--accent); }
       <rect class="box" x="0" y="55" width="130" height="50"/><text x="16" y="87">question</text>
       <rect class="box" x="0" y="160" width="130" height="50"/><text x="16" y="192">passage</text>
       <path class="arr" d="M138 80 H188"/><path class="arr" d="M138 185 H188"/>
-      <text x="196" y="87" class="t">[0.12, …]</text><text x="196" y="192" class="t">[0.09, …]</text>
-      <text x="0" y="265" font-size="16" class="m">encoded separately, then compared</text>
+      <text x="196" y="87" class="t">[-0.05, -0.02, …]</text><text x="196" y="192" class="t">[-0.02, -0.02, …]</text>
+      <path class="arr" d="M330 100 Q380 140 330 175"/><text x="392" y="145" class="t b" font-size="24">0.66</text>
+      <text x="0" y="265" font-size="16" class="m">each turned into 1024 numbers on its own, then compared</text>
       <line x1="500" y1="0" x2="500" y2="290" class="rule"/>
       <text x="540" y="20" class="t m" font-size="14">RERANKER: SLOW, PRECISE</text>
       <rect class="hi" x="540" y="105" width="230" height="60"/><text x="556" y="142">question + passage</text>
       <path class="arr" d="M778 135 H828"/>
-      <text x="838" y="147" class="t b" font-size="32">0.93</text>
+      <text x="838" y="147" class="t b" font-size="32">9.70</text>
       <text x="540" y="265" font-size="16" class="m">read together: 40 pairs scored, top 8 kept</text>
     </g>
   </svg>
-  <p class="foot">sdadas/polish-reranker-roberta-v3</p>
+  <p class="foot">real scores for “Filip Łobodziński and Bob Dylan”, passage [1]; reranker: sdadas/polish-reranker-roberta-v3</p>
 </section>
 
 <section>
